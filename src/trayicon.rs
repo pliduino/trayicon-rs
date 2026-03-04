@@ -35,9 +35,7 @@ impl<T: TrayIconEvent> iced_futures::subscription::Recipe for TrayIconSubscripti
         let stream = stream::unfold(receiver, |receiver| async move {
             let receiver_clone = receiver.clone();
 
-            let mut lock = receiver_clone
-                .try_lock()
-                .expect("Failed to lock tray icon receiver, have you called subscribe() twice?");
+            let mut lock = receiver_clone.lock().await;
 
             let result = lock.recv().await;
 
