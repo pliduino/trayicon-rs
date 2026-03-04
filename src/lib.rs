@@ -23,12 +23,24 @@ mod trayiconsender;
 pub trait TrayIconEvent: PartialEq + Clone + 'static + Send + Sync {}
 impl<T> TrayIconEvent for T where T: PartialEq + Clone + 'static + Send + Sync {}
 
+#[cfg(feature = "iced")]
+use iced_futures::Subscription;
+
 // Public api
 pub use crate::icon::Icon;
 pub use crate::menubuilder::{MenuBuilder, MenuItem};
 pub use crate::trayicon::TrayIcon;
 pub use crate::trayiconbuilder::Error;
 pub use crate::trayiconbuilder::TrayIconBuilder;
+
+#[cfg(not(feature = "iced"))]
+pub(crate) type Sender<T> = std::sync::mpsc::Sender<T>;
+#[cfg(feature = "iced")]
+pub(crate) type Sender<T> = tokio::sync::mpsc::UnboundedSender<T>;
+#[cfg(not(feature = "iced"))]
+pub(crate) type Receiver<T> = std::sync::mpsc::Receiver<T>;
+#[cfg(feature = "iced")]
+pub(crate) type Receiver<T> = tokio::sync::mpsc::UnboundedReceiver<T>;
 
 /// Status/visibility state for the tray icon (KDE StatusNotifierItem status)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -10,12 +10,55 @@ where
     builder: TrayIconBuilder<T>,
 }
 
+#[cfg(feature = "iced")]
+#[derive(Clone, Debug)]
+pub struct TrayIconSubscription<T: TrayIconEvent>(
+    pub(crate) std::sync::Arc<tokio::sync::Mutex<crate::Receiver<T>>>,
+);
+
+#[cfg(feature = "iced")]
+impl<T: TrayIconEvent> iced_futures::subscription::Recipe for TrayIconSubscription<T> {
+    type Output = T;
+
+    fn hash(&self, state: &mut iced_futures::subscription::Hasher) {
+        std::hash::Hash::hash(&(self as *const Self), state);
+    }
+
+    fn stream(
+        self: Box<Self>,
+        _input: iced_futures::subscription::EventStream,
+    ) -> iced_futures::BoxStream<Self::Output> {
+        use futures::{stream, StreamExt};
+
+        let receiver = self.0.clone();
+
+        let stream = stream::unfold(receiver, |receiver| async move {
+            let receiver_clone = receiver.clone();
+
+            let mut lock = receiver_clone
+                .try_lock()
+                .expect("Failed to lock tray icon receiver, have you called subscribe() twice?");
+
+            let result = lock.recv().await;
+
+            result.map(|e| (e, receiver))
+        });
+
+        stream.boxed()
+    }
+}
+
 impl<T> TrayIcon<T>
 where
     T: TrayIconEvent,
 {
     pub(crate) fn new(sys: crate::TrayIconSys<T>, builder: TrayIconBuilder<T>) -> TrayIcon<T> {
         TrayIcon { builder, sys }
+    }
+
+    #[cfg(feature = "iced")]
+    pub fn subscribe(&self) -> iced_futures::Subscription<T> {
+        iced_futures::subscription::from_recipe(self.builder.subscription.clone())
     }
 
     /// Set the icon if changed

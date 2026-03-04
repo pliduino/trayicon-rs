@@ -1,6 +1,7 @@
 mod canonical_dbus_menu;
 mod status_notifier_item;
 mod status_notifier_watcher;
+
 use super::kdeicon::KdeIcon;
 pub use canonical_dbus_menu::*;
 pub use status_notifier_item::{StatusNotifierEvent, StatusNotifierItemImpl};
@@ -36,7 +37,7 @@ where
 
 pub fn register_notifier_item_watcher_blocking(
     connection: &zbus::Connection,
-    channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
+    channel_sender: crate::Sender<StatusNotifierEvent>,
     icon_buffer: Option<Vec<u8>>,
     icon_width: u32,
     icon_height: u32,

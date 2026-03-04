@@ -21,7 +21,7 @@ where
     // sender: TrayIconSender<T>,
     #[allow(dead_code)]
     menu: Option<MenuSys<T>>,
-    event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
+    event_sender: Option<crate::Sender<(i32, T)>>,
     icon_data: Arc<Mutex<KdeIcon>>,
     tooltip_data: Arc<Mutex<String>>,
     title_data: Arc<Mutex<String>>,
@@ -40,7 +40,8 @@ where
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        tray_icon_sender: TrayIconSender<T>,
+        #[cfg(not(feature = "iced"))] tray_icon_sender: TrayIconSender<T>,
+        #[cfg(feature = "iced")] tray_icon_sender: crate::Sender<T>,
         menu: Option<MenuSys<T>>,
         icon: Option<&crate::Icon>,
         tooltip: String,
@@ -51,7 +52,10 @@ where
         _on_right_click: Option<T>,
     ) -> Result<KdeTrayIconImpl<T>, Error> {
         let connection = get_dbus_connection();
+        #[cfg(not(feature = "iced"))]
         let (sender, receiver) = std::sync::mpsc::channel();
+        #[cfg(feature = "iced")]
+        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
 
         // Extract icon data if available
         let (icon_buffer, icon_width, icon_height) = if let Some(icon) = icon {
@@ -79,6 +83,7 @@ where
 
         let last_xdg_activation_token = Arc::new(Mutex::new(None));
         let last_xdg_activation_token_clone = last_xdg_activation_token.clone();
+        #[cfg(not(feature = "iced"))]
         std::thread::spawn(move || {
             while let Ok(event) = receiver.recv() {
                 match event {
@@ -86,6 +91,30 @@ where
                     StatusNotifierEvent::Activate(_x, _y) => {
                         if let Some(on_click) = &on_click {
                             tray_sender.send(on_click);
+                        }
+                    }
+                    StatusNotifierEvent::ProvideXdgActivationToken(token) => {
+                        if let Ok(mut last_token) = last_xdg_activation_token_clone.lock() {
+                            *last_token = Some(token);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        });
+        #[cfg(feature = "iced")]
+        tokio::spawn(async move {
+            while let Some(event) = receiver.recv().await {
+                match event {
+                    // Handle events here, e.g., map to tray icon actions
+                    StatusNotifierEvent::Activate(_x, _y) => {
+                        if let Some(on_click) = &on_click {
+                            // No problem unwrapping here, the receiver is safe inside Arc.
+                            // Will only return if TrayIcon is dropped (which is intended).
+                            match tray_sender.send(on_click.clone()) {
+                                Ok(_) => {}
+                                Err(_) => return,
+                            };
                         }
                     }
                     StatusNotifierEvent::ProvideXdgActivationToken(token) => {

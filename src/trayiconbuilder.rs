@@ -1,4 +1,6 @@
-use crate::{trayiconsender::TrayIconSender, Icon, MenuBuilder, TrayIcon, TrayIconEvent};
+#[cfg(not(feature = "iced"))]
+use crate::trayiconsender::TrayIconSender;
+use crate::{Icon, MenuBuilder, TrayIcon, TrayIconEvent};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -40,7 +42,13 @@ where
     pub(crate) on_click: Option<T>,
     pub(crate) on_double_click: Option<T>,
     pub(crate) on_right_click: Option<T>,
+    #[cfg(not(feature = "iced"))]
     pub(crate) sender: Option<TrayIconSender<T>>,
+
+    #[cfg(feature = "iced")]
+    pub(crate) sender: crate::Sender<T>,
+    #[cfg(feature = "iced")]
+    pub(crate) subscription: crate::trayicon::TrayIconSubscription<T>,
 }
 
 impl<T> TrayIconBuilder<T>
@@ -49,6 +57,8 @@ where
 {
     #[allow(clippy::new_without_default)]
     pub fn new() -> TrayIconBuilder<T> {
+        #[cfg(feature = "iced")]
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<T>();
         TrayIconBuilder {
             icon: Err(Error::IconMissing),
             menu: None,
@@ -57,7 +67,14 @@ where
             on_click: None,
             on_double_click: None,
             on_right_click: None,
+            #[cfg(not(feature = "iced"))]
             sender: None,
+            #[cfg(feature = "iced")]
+            subscription: crate::trayicon::TrayIconSubscription(std::sync::Arc::new(
+                tokio::sync::Mutex::new(rx),
+            )),
+            #[cfg(feature = "iced")]
+            sender: tx,
         }
     }
 
@@ -69,6 +86,7 @@ where
         f(self)
     }
 
+    #[cfg(not(feature = "iced"))]
     pub fn sender(mut self, cb: impl Fn(&T) + Send + Sync + 'static) -> Self {
         self.sender = Some(TrayIconSender::new(cb));
         self

@@ -25,7 +25,7 @@ where
     T: TrayIconEvent,
 {
     pub(crate) items: Vec<MenuItemData<T>>,
-    pub(crate) event_sender: Option<std::sync::mpsc::Sender<(i32, T)>>,
+    pub(crate) event_sender: Option<crate::Sender<(i32, T)>>,
 }
 
 impl<T> MenuSys<T>
@@ -54,7 +54,10 @@ where
     let icon = builder.icon.as_ref()?;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
+    #[cfg(not(feature = "iced"))]
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
+    #[cfg(feature = "iced")]
+    let sender = builder.sender.clone();
     let on_double_click = builder.on_double_click.clone();
     // let notify_icon = WinNotifyIcon::new(hicon, tooltip);
 
@@ -63,16 +66,26 @@ where
         let mut built_menu = rhmenu.build()?;
 
         // Set up event handling channel
+        #[cfg(not(feature = "iced"))]
         let (event_tx, event_rx) = std::sync::mpsc::channel::<(i32, T)>();
+        #[cfg(feature = "iced")]
+        let (event_tx, mut event_rx) = tokio::sync::mpsc::unbounded_channel::<(i32, T)>();
         let sender_clone = sender.clone();
 
         // Store the sender in MenuSys
         built_menu.event_sender = Some(event_tx.clone());
 
         // Spawn thread to handle menu events
+        #[cfg(not(feature = "iced"))]
         std::thread::spawn(move || {
             while let Ok((_menu_id, event)) = event_rx.recv() {
                 sender_clone.send(&event);
+            }
+        });
+        #[cfg(feature = "iced")]
+        tokio::spawn(async move {
+            while let Some((_menu_id, event)) = event_rx.recv().await {
+                sender_clone.send(event);
             }
         });
 

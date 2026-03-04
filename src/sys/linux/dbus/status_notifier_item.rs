@@ -21,7 +21,7 @@ pub enum StatusNotifierEvent {
 #[derive(Debug)]
 pub struct StatusNotifierItemImpl {
     pub id: String,
-    pub channel_sender: std::sync::mpsc::Sender<StatusNotifierEvent>,
+    pub channel_sender: crate::Sender<StatusNotifierEvent>,
     pub icon_data: Arc<Mutex<KdeIcon>>,
     pub tooltip: Arc<Mutex<String>>,
     pub title: Arc<Mutex<String>>,

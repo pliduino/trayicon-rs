@@ -40,6 +40,7 @@ objc2-app-kit = { version = "0.3", features = [
 ] }
 objc2-foundation = { version = "0.3", features = ["NSData", "NSString"] }
 
+
 [lib]
 name = "trayicon"
 path = "src/lib.rs"
@@ -58,3 +59,8 @@ members = [
 
 [features]
 default = []
+iced = ["dep:tokio", "dep:iced_futures"]
+
+[dependencies]
+iced_futures = { version = "0.14.0", default-features = false, features = ["tokio"], optional = true }
+tokio = { version = "1.50.0", features = ["rt", "sync"], optional = true }
