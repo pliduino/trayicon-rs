@@ -23,9 +23,6 @@ mod trayiconsender;
 pub trait TrayIconEvent: PartialEq + Clone + 'static + Send + Sync {}
 impl<T> TrayIconEvent for T where T: PartialEq + Clone + 'static + Send + Sync {}
 
-#[cfg(feature = "iced")]
-use iced_futures::Subscription;
-
 // Public api
 pub use crate::icon::Icon;
 pub use crate::menubuilder::{MenuBuilder, MenuItem};

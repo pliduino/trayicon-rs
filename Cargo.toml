@@ -58,7 +58,7 @@ members = [
 ]
 
 [features]
-default = ["iced"]
+default = []
 iced = ["dep:tokio", "dep:iced_futures"]
 
 [dependencies]

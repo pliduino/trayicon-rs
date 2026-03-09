@@ -28,7 +28,7 @@ impl<T: TrayIconEvent> iced_futures::subscription::Recipe for TrayIconSubscripti
         self: Box<Self>,
         _input: iced_futures::subscription::EventStream,
     ) -> iced_futures::BoxStream<Self::Output> {
-        use futures::{stream, StreamExt};
+        use iced_futures::futures::{stream, StreamExt};
 
         let receiver = self.0.clone();
 

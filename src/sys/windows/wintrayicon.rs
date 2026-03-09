@@ -9,9 +9,9 @@ use winapi::um::winuser;
 
 use super::wchar::wchar;
 use super::{msgs, winnotifyicon::WinNotifyIcon, MenuSys};
-use crate::{
-    trayiconsender::TrayIconSender, Error, Icon, MenuBuilder, TrayIconBase, TrayIconEvent,
-};
+#[cfg(not(feature = "iced"))]
+use crate::trayiconsender::TrayIconSender;
+use crate::{Error, Icon, MenuBuilder, TrayIconBase, TrayIconEvent};
 
 pub type WinTrayIcon<T> = WindowBox<T>;
 
@@ -64,7 +64,10 @@ where
     T: TrayIconEvent,
 {
     hwnd: HWND,
+    #[cfg(not(feature = "iced"))]
     sender: TrayIconSender<T>,
+    #[cfg(feature = "iced")]
+    sender: crate::Sender<T>,
     menu: Option<MenuSys<T>>,
     notify_icon: WinNotifyIcon,
     on_click: Option<T>,
@@ -83,7 +86,8 @@ where
     #[allow(clippy::new_ret_no_self)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        sender: TrayIconSender<T>,
+        #[cfg(not(feature = "iced"))] sender: TrayIconSender<T>,
+        #[cfg(feature = "iced")] sender: crate::Sender<T>,
         menu: Option<MenuSys<T>>,
         notify_icon: WinNotifyIcon,
         on_click: Option<T>,
@@ -176,7 +180,10 @@ where
                     // Left click tray icon
                     winuser::WM_LBUTTONUP => {
                         if let Some(e) = self.on_click.as_ref() {
+                            #[cfg(not(feature = "iced"))]
                             self.sender.send(e);
+                            #[cfg(feature = "iced")]
+                            self.sender.send(e.clone());
                         }
                     }
 
@@ -184,7 +191,10 @@ where
                     winuser::WM_RBUTTONUP => {
                         // Send right click event or show menu if on_right_click is None
                         if let Some(e) = self.on_right_click.as_ref() {
+                            #[cfg(not(feature = "iced"))]
                             self.sender.send(e);
+                            #[cfg(feature = "iced")]
+                            self.sender.send(e.clone());
                         } else {
                             // Default behavior: show menu on right click
                             if let Some(menu) = &self.menu {
@@ -201,7 +211,10 @@ where
                     // Double click tray icon
                     winuser::WM_LBUTTONDBLCLK => {
                         if let Some(e) = self.on_double_click.as_ref() {
+                            #[cfg(not(feature = "iced"))]
                             self.sender.send(e);
+                            #[cfg(feature = "iced")]
+                            self.sender.send(e.clone());
                         }
                     }
                     _ => {}
@@ -219,7 +232,10 @@ where
                 if cmd == 0 {
                     if let Some(v) = self.menu.as_ref() {
                         if let Some(event) = v.ids.get(&(identifier as usize)) {
+                            #[cfg(not(feature = "iced"))]
                             self.sender.send(event);
+                            #[cfg(feature = "iced")]
+                            self.sender.send(event.clone());
                         }
                     }
                 }

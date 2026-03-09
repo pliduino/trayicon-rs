@@ -34,7 +34,10 @@ where
     let hicon = &builder.icon.as_ref()?.sys;
     let on_click = builder.on_click.clone();
     let on_right_click = builder.on_right_click.clone();
+    #[cfg(not(feature = "iced"))]
     let sender = builder.sender.clone().ok_or(Error::SenderMissing)?;
+    #[cfg(feature = "iced")]
+    let sender = builder.sender.clone();
     let on_double_click = builder.on_double_click.clone();
     let notify_icon = WinNotifyIcon::new(hicon, tooltip);
 
